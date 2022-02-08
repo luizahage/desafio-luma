@@ -3,7 +3,7 @@
 
 # ### Pontos de Interesse por GPS - Integração REST API
 
-# In[10]:
+# In[1]:
 
 
 import pyodbc
@@ -21,10 +21,12 @@ connection = pyodbc.connect(data)
 print('Conexão Bem sucedida')
 
 
-# In[23]:
+# In[25]:
 
 
-from math import sqrt 
+from math import sqrt
+from json import JSONEncoder
+
 
 class Poi:
     def __init__(self, name, x, y):
@@ -77,12 +79,23 @@ def get_pois(connection):
     
     return pois
 
+def get_near_pois(x, y, max_distance):
+    list_distance = []
+
+    for poi in get_pois(connection):
+        distance = poi.calc_distance(x, y)
+        
+        if distance <= max_distance:
+            dict_poi = poi.__dict__
+            dict_poi['distance'] = round(distance, 2)
+            list_distance.append(dict_poi)
+    return list_distance
+
 
 # In[ ]:
 
 
-from flask import Flask
-from flask import request
+from flask import Flask, request
 import json
 
 app = Flask(__name__)
@@ -93,11 +106,30 @@ def poi():
     #    return json.dumps(get_pois(connection))
         return json.dumps(get_pois(connection), cls = GenericJsonEncoder)
     elif request.method == 'POST':
-        poi = Poi(request.form['name'], request.form['x'], request.form['y'])
+        poi = Poi(request.form['name'], request.form['x'], request.form['y'])        
         insert_pois(connection, poi)
-        return 'Criado com sucesso!'
-    
+        
+        return 'Criado com sucesso!', 201
 
+@app.route('/poi/near', methods = ['GET'] )
+def poi_near():
+    args = request.args
+    print(args)
+    max_distance = args.get('max_distance')
+    x = args.get('x')
+    y = args.get('y')
+    
+    if is_valid_poi_near(x, y, max_distance):
+        return json.dumps(get_near_pois(int(x), int(y), int(max_distance)), cls = GenericJsonEncoder)
+    else:
+        return 'Argumentos inválidos!', 400
+        
+def is_valid_poi_near(x, y, max_distance):
+    try:
+        return int(max_distance) >= 0 and int(x) >= 0 and int(y) >= 0
+    except:
+        return False
+    
 app.run()
 
 
