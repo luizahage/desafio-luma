@@ -1,50 +1,27 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# ### Pontos de Interesse por GPS - Integração Funções
+# ### Pontos de Interesse por GPS - Integração REST API
 
-# In[102]:
-
-
-# Comando para fazer o ID recomeçar
-#DBCC CHECKIDENT ('POI', RESEED, 0 );
-
-# Comando para deletar um linha específica
-#DELETE FROM POI WHERE NAME = 'Posto';
+# In[10]:
 
 
-# In[103]:
+import pyodbc
+
+# Conexão com o Banco de Dados:
+
+data = ("Driver={SQL Server};"
+            "Server=DESKTOP-K9NVNOF;"
+            "Database=POIS;"
+            "UID=SystemUser;"
+            "PWD=iDC%P#Nr6uLhLgnKKTuNJ72&aY5pwRWmoEoJ;")
 
 
-#cursor.execute("INSERT INTO POI (NAME, X, Y) VALUES ('Lanchonete', 27, 12);")
-#cursor.execute("SELECT * FROM POI;") 
-#row = cursor.fetchone() 
-#while row: 
-#    print(row)
-#    row = cursor.fetchone()
-#cursor.commit()
-#cursor.close()
+connection = pyodbc.connect(data)
+print('Conexão Bem sucedida')
 
 
-
-#from math import sqrt 
-
-#class Poi:
-#    def __init__(self, name, x ,y):
-#        self.name = name
-#        self.x = x
-#         self.y = y
-#     def calc_dist(self, x, y):
-#         return sqrt(((x - self.x)**2) + ((y - self.y)**2))
-
-# poi = Poi('Lanchonete', 27, 12)
-
-# dict_poi = {"name": 'Lanchonete', "x": 27, "y":12}
-
-# print(dict_poi["name"])
-
-
-# In[63]:
+# In[23]:
 
 
 from math import sqrt 
@@ -62,6 +39,10 @@ class Poi:
     def calc_distance(self, x, y):
         return sqrt(((x - self.x)**2) + ((y - self.y)**2))
 
+class GenericJsonEncoder(JSONEncoder):
+        def default(self, obj):
+            return obj.__dict__
+    
 # def format_poi(poi):
 #     return '{} (x = {}, y = {})'.format(poi['name'], poi['x'], poi['y'])
 
@@ -97,34 +78,27 @@ def get_pois(connection):
     return pois
 
 
-# In[47]:
+# In[ ]:
 
 
-import pyodbc
+from flask import Flask
+from flask import request
+import json
 
-# Conexão com o Banco de Dados:
+app = Flask(__name__)
 
-data = ("Driver={SQL Server};"
-            "Server=DESKTOP-K9NVNOF;"
-            "Database=POIS;"
-            "UID=SystemUser;"
-            "PWD=iDC%P#Nr6uLhLgnKKTuNJ72&aY5pwRWmoEoJ;")
+@app.route('/poi', methods = ['GET', 'POST'] )
+def poi():
+    if request.method == 'GET':
+    #    return json.dumps(get_pois(connection))
+        return json.dumps(get_pois(connection), cls = GenericJsonEncoder)
+    elif request.method == 'POST':
+        poi = Poi(request.form['name'], request.form['x'], request.form['y'])
+        insert_pois(connection, poi)
+        return 'Criado com sucesso!'
+    
 
-
-connection = pyodbc.connect(data)
-print('Conexão Bem sucedida')
-
-#cursor.execute("INSERT INTO POI (NAME, X, Y) VALUES ('Posto', 31, 18);")
-#cursor.execute("SELECT * FROM POI;") 
-
-#row1 = cursor.fetchall()
-#print(row1)
-#row = cursor.fetchone()
-#while row: 
-#    print(row)
-#    row = cursor.fetchone()
-#cursor.commit()
-#cursor.close()
+app.run()
 
 
 # In[36]:
