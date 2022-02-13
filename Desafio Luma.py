@@ -3,7 +3,7 @@
 
 # ### Pontos de Interesse por GPS - Integração REST API
 
-# In[1]:
+# In[4]:
 
 
 import pyodbc
@@ -21,12 +21,12 @@ connection = pyodbc.connect(data)
 print('Conexão Bem sucedida')
 
 
-# In[25]:
+# In[5]:
 
 
 from math import sqrt
 from json import JSONEncoder
-
+from operator import itemgetter
 
 class Poi:
     def __init__(self, name, x, y):
@@ -89,7 +89,8 @@ def get_near_pois(x, y, max_distance):
             dict_poi = poi.__dict__
             dict_poi['distance'] = round(distance, 2)
             list_distance.append(dict_poi)
-    return list_distance
+            list_distance_sorted = sorted(list_distance, key=itemgetter('distance'))
+    return list_distance_sorted
 
 
 # In[ ]:
@@ -107,10 +108,22 @@ def poi():
         return json.dumps(get_pois(connection), cls = GenericJsonEncoder)
     elif request.method == 'POST':
         poi = Poi(request.form['name'], request.form['x'], request.form['y'])        
-        insert_pois(connection, poi)
         
-        return 'Criado com sucesso!', 201
+        if is_valid_poi(poi.name, poi.x, poi.y):
+            insert_pois(connection, poi)
+            return 'Criado com sucesso!', 201
+        else:
+            return 'Argumentos inválidos!', 400        
+#        insert_pois(connection, poi)
+        
+#        return 'Criado com sucesso!', 201
 
+def is_valid_poi(name, x, y):
+    try:
+        return str(name) and int(x) >= 0 and int(y) >= 0
+    except:
+        return False    
+    
 @app.route('/poi/near', methods = ['GET'] )
 def poi_near():
     args = request.args
@@ -133,7 +146,7 @@ def is_valid_poi_near(x, y, max_distance):
 app.run()
 
 
-# In[36]:
+# In[4]:
 
 
 # Inserindo os pontos de interesse e cadastrando esses pontos no Banco de Dados:
